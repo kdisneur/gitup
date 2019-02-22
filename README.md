@@ -13,9 +13,9 @@ Create a configuration file in `~/.gituprc` with the following format:
 
 ```yaml
 repositories:
-  - url: git@github.com/your_name/a_repository
+  - url: git@github.com:your_name/a_repository
     path: ~/Workspace/a_repository
-  - url: git@github.com/an_organization/another_repository
+  - url: git@github.com:an_organization/another_repository
     path: ~/Workspace/another_repository
 ```
 

@@ -1,0 +1,149 @@
+version: 2.1
+
+executors:
+  golang:
+    docker:
+      - image: circleci/golang:1.11.5
+
+commands:
+  build_binary:
+    parameters:
+      arch:
+        type: string
+      os:
+        type: string
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v6-dependency-cache
+      - run:
+          command: 'GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> make compile GOCOMPILE_OPTIONS="-mod=vendor" BINARY_NAME=gitup-<< parameters.os >>-<< parameters.arch >>'
+      - persist_to_workspace:
+          root: build
+          paths:
+            - gitup-<< parameters.os >>-<< parameters.arch >>
+
+jobs:
+  lint:
+    executor: golang
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v6-dependency-cache
+      - run:
+          command: make test-style GOLINT=~/tools/golint
+
+  setup:
+    executor: golang
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v6-dependency-cache
+      - run:
+          command: go mod vendor
+      - run:
+          command: |
+            if [[ ! -f ~/tools/ghr ]]; then
+              mkdir -p ~/tools
+              go get github.com/tcnksm/ghr
+              mv /go/bin/ghr ~/tools
+            fi
+      - run:
+          command: |
+            if [[ ! -f ~/tools/golint ]]; then
+              mkdir -p ~/tools
+              go get golang.org/x/lint/golint
+              mv /go/bin/golint ~/tools
+            fi
+      - save_cache:
+          key: v6-dependency-cache
+          paths:
+            - vendor
+            - ~/tools
+
+  build_darwin_386:
+    executor: golang
+    steps:
+      - build_binary:
+          os: "darwin"
+          arch: "386"
+
+  build_linux_amd64:
+    executor: golang
+    steps:
+      - build_binary:
+          os: "linux"
+          arch: "amd64"
+
+  build_linux_386:
+    executor: golang
+    steps:
+      - build_binary:
+          os: "linux"
+          arch: "386"
+
+  unit_test:
+    executor: golang
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v6-dependency-cache
+      - run:
+          command: make test-unit GOTEST_OPTIONS="-v -mod=vendor"
+
+  publish:
+    executor: golang
+    steps:
+      - restore_cache:
+          keys:
+            - v6-dependency-cache
+      - attach_workspace:
+          at: ./artifacts
+      - run:
+          command: |
+            BRANCH=$(./artifacts/gitup-linux-386 version | sed -E 's/.*GitBranch:"([^"]+)".*/\1/')
+            SHA=$(./artifacts/gitup-linux-386 version | sed -E 's/.*GitCommit:"([^"]+)".*/\1/')
+            ~/tools/ghr -t ${GITHUB_TOKEN} \
+                -u ${CIRCLE_PROJECT_USERNAME} \
+                -r ${CIRCLE_PROJECT_REPONAME} \
+                -c ${CIRCLE_SHA1} \
+                -n "${BRANCH} commit: ${SHA}" \
+                -delete \
+                ${BRANCH}-${SHA} ./artifacts
+workflows:
+  version: 2.1
+
+  gitup:
+    jobs:
+      - setup
+      - build_darwin_386:
+          requires:
+            - unit_test
+            - lint
+      - build_linux_amd64:
+          requires:
+            - unit_test
+            - lint
+      - build_linux_386:
+          requires:
+            - unit_test
+            - lint
+      - unit_test:
+          requires:
+            - setup
+      - lint:
+          requires:
+            - setup
+      - publish:
+          filters:
+            branches:
+              only:
+                - master
+          requires:
+            - build_darwin_386
+            - build_linux_amd64
+            - build_linux_386

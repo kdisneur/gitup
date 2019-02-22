@@ -35,6 +35,7 @@ type Screen struct {
 	terminfo Terminfo
 }
 
+// NewScreen reprensents a new terminal canva where we can write
 func NewScreen(w io.Writer) (*Screen, error) {
 	terminfo, err := NewTerminfo()
 	if err != nil {

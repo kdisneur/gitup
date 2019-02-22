@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,16 +13,29 @@ import (
 	"github.com/kdisneur/gitup/pkg/config"
 	"github.com/kdisneur/gitup/pkg/terminal"
 	"github.com/kdisneur/gitup/pkg/vcs"
+	"github.com/kdisneur/gitup/pkg/version"
 )
 
+var rawConfigPath string
+
+func init() {
+	flag.StringVar(&rawConfigPath, "config", "~/.gituprc", "location of the gituprc file")
+}
+
 func main() {
-	rawConfigParh := "~/.gituprc"
+	flag.Parse()
+
+	if flag.Arg(0) == "version" {
+		fmt.Printf("%#+v\n", version.GetInfo())
+		os.Exit(0)
+	}
+
 	versionControl := vcs.NewGit()
 	ctx := context.Background()
 
-	configPath, err := homedir.Expand(rawConfigParh)
+	configPath, err := homedir.Expand(rawConfigPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "can't expand path %s: %s", rawConfigParh, err.Error())
+		fmt.Fprintf(os.Stderr, "can't expand path %s: %s", rawConfigPath, err.Error())
 		os.Exit(1)
 	}
 

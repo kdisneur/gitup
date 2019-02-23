@@ -1,7 +1,7 @@
 asset: gitup-darwin-386
 tap: kdisneur/homebrew-formulae/Formula/gitup.rb
-template: >
-  class App < Formula
+template: |
+  class Gitup < Formula
     desc     "$REPO_DESCRIPTION"
     homepage "$REPO_WEBITE"
     version  "$STABLE_VERSION"

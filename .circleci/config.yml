@@ -139,10 +139,10 @@ workflows:
           requires:
             - setup
       - publish:
-          filters:
-            branches:
-              only:
-                - master
+          # filters:
+          #   branches:
+          #     only:
+          #       - master
           requires:
             - build_darwin_386
             - build_linux_amd64

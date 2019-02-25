@@ -18,10 +18,11 @@ commands:
           keys:
             - v6-dependency-cache
       - run:
-          command: 'GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> make compile GOCOMPILE_OPTIONS="-mod=vendor" BINARY_NAME=gitup-<< parameters.os >>-<< parameters.arch >> BUILD_NUMBER=${CIRCLE_BUILD_NUM} IS_RELEASE=${CIRCLE_TAG}'
+          command: 'make compile GOCOMPILE_OPTIONS="-mod=vendor" BUILD_NUMBER=${CIRCLE_WORKFLOW_ID} OS=<< parameters.os >> ARCH=<< parameters.arch >>'
       - persist_to_workspace:
           root: build
           paths:
+            - gitup-<< parameters.os >>-<< parameters.arch >>.tgz
             - gitup-<< parameters.os >>-<< parameters.arch >>
 
 jobs:
@@ -105,68 +106,20 @@ jobs:
           at: ./artifacts
       - run:
           command: |
-            BRANCH=$(./artifacts/gitup-linux-386 version | sed -E 's/.*GitBranch:"([^"]+)".*/\1/')
             SHA=$(./artifacts/gitup-linux-386 version | sed -E 's/.*GitCommit:"([^"]+)".*/\1/')
             VERSION=$(./artifacts/gitup-linux-386 version | sed -E 's/.*Version:"([^"]+)".*/\1/')
             IS_PRERELEASE=$(if echo ${VERSION} | grep -qE 'v[0-9]+\.[0-9]+\.[0-9]+$'; then echo ""; else echo "-prerelease"; fi)
+            mkdir ghr-artifacts
+            cp ./artifacts/*.tgz ghr-artifacts
             ~/tools/ghr -t ${GITHUB_TOKEN} \
                 -u ${CIRCLE_PROJECT_USERNAME} \
                 -r ${CIRCLE_PROJECT_REPONAME} \
                 -c ${CIRCLE_SHA1} \
                 -n "${VERSION}" \
-                -delete \
                 ${IS_PRERELEASE} \
-                ${VERSION} ./artifacts
+                ${VERSION} ./ghr-artifacts
 workflows:
   version: 2.1
-
-  tagged:
-    jobs:
-      - setup:
-        filters:
-          tags:
-            only: /^v.*/
-      - build_darwin_386:
-        filters:
-          tags:
-            only: /^v.*/
-          requires:
-            - unit_test
-            - lint
-      - build_linux_amd64:
-        filters:
-          tags:
-            only: /^v.*/
-          requires:
-            - unit_test
-            - lint
-      - build_linux_386:
-        filters:
-          tags:
-            only: /^v.*/
-          requires:
-            - unit_test
-            - lint
-      - unit_test:
-        filters:
-          tags:
-            only: /^v.*/
-          requires:
-            - setup
-      - lint:
-        filters:
-          tags:
-            only: /^v.*/
-          requires:
-            - setup
-      - publish:
-        filters:
-          tags:
-            only: /^v.*/
-          requires:
-            - build_darwin_386
-            - build_linux_amd64
-            - build_linux_386
 
   gitup:
     jobs:

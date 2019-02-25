@@ -1,14 +1,14 @@
-asset: gitup-darwin-386
+asset: gitup-darwin-386.tgz
 tap: kdisneur/homebrew-formulae/Formula/gitup.rb
 template: |
   class Gitup < Formula
     desc     "$REPO_DESCRIPTION"
-    homepage "$REPO_WEBITE"
+    homepage "$REPO_WEBSITE"
     version  "$STABLE_VERSION"
-    url      "$STABLE_ASSET_URL"
-    sha256   "$STABLE_ASSET_SHA256"
+    url      "$STABLE_URL"
+    sha256   "$STABLE_SHA256"
 
     def install
-      prefix.install "gitup"
+      bin.install "gitup"
     end
   end
